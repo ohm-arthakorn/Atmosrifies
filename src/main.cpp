@@ -6,8 +6,10 @@
 #include <BlynkSimpleEsp32.h>
 #include <SoftwareSerial.h>
 #include "Adafruit_SPIDevice.h"
+#include <Wire.h>
+#include <Adafruit_CCS811.h>
 
-SoftwareSerial mySerial(13, 12); // RX, TX
+SoftwareSerial mySerial(32, 33); // RX, TX
 int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
@@ -16,9 +18,55 @@ int pm10 = 0;
 const char *ssid = "Ohm";
 const char *password = "123456789";
 
+Adafruit_CCS811 ccs;
+
+// I2C Scanner
+void checkingi2c()
+{
+  while (!Serial)
+  {
+  }
+
+  Serial.println();
+  Serial.println("www.9arduino.com ...");
+  Serial.println("I2C scanner. Scanning ...");
+  byte count = 0;
+
+  Wire.begin();
+  for (byte i = 8; i < 120; i++) // Loop ค้นหา Address
+  {
+    Wire.beginTransmission(i);
+    if (Wire.endTransmission() == 0)
+    {
+      Serial.print("Found address: ");
+      Serial.print(i, DEC);
+      Serial.print(" (0x");
+      Serial.print(i, HEX);
+      Serial.println(")");
+      count++;
+      delay(1);
+    }
+  }
+  Serial.println("Done.");
+  Serial.print("Found ");
+  Serial.print(count, DEC);
+  Serial.println(" device(s).");
+}
+
 void setup()
 {
-  Serial.begin(115200);
+  Wire.begin();
+  if (!ccs.begin())
+  {
+    Serial.println("Failed to start sensor! Please check your wiring.");
+    while (1)
+      ;
+  }
+  // Wait for the sensor to be ready
+  while (!ccs.available())
+    ;
+
+  Serial.begin(9600);
   mySerial.begin(9600);
 
   // connect WiFi
@@ -37,6 +85,8 @@ void setup()
 
   // Connect to Blynk
   Blynk.begin("ov9pT-x8NgNHIvmLpBkkP4qh0kUNCjEN", "Ohm", "123456789");
+
+  checkingi2c();
 }
 
 // Function to Read and Send PM Data to Blynk
@@ -89,6 +139,7 @@ void readPMData()
   Blynk.virtualWrite(V1, pm1);
   Blynk.virtualWrite(V2, pm2_5);
   Blynk.virtualWrite(V3, pm10);
+  Blynk.virtualWrite(V4, ccs.geteCO2());
 
   delay(1000);
 }
@@ -97,4 +148,20 @@ void loop()
 {
   Blynk.run();
   readPMData();
+  if (ccs.available())
+  {
+    if (!ccs.readData())
+    {
+      Serial.print("eCO2: ");
+      Serial.print(ccs.geteCO2());
+      Serial.print(" ppm, TVOC: ");
+      Serial.print(ccs.getTVOC());
+      Serial.println(" ppb");
+    }
+    else
+    {
+      Serial.println("Error reading sensor data");
+    }
+  }
+  delay(1000);
 }
