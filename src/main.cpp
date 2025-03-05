@@ -9,16 +9,17 @@
 #include <Wire.h>
 #include <Adafruit_CCS811.h>
 
+Adafruit_CCS811 ccs;
 SoftwareSerial mySerial(32, 33); // RX, TX
 int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
+int eCO2;
+int TVOC;
 
 // WiFi Credentials
 const char *ssid = "Ohm";
 const char *password = "123456789";
-
-Adafruit_CCS811 ccs;
 
 // I2C Scanner
 void checkingi2c()
@@ -53,18 +54,17 @@ void checkingi2c()
   Serial.println(" device(s).");
 }
 
+
 void setup()
 {
   Wire.begin();
   if (!ccs.begin())
   {
     Serial.println("Failed to start sensor! Please check your wiring.");
-    while (1)
-      ;
+    while (1);
   }
   // Wait for the sensor to be ready
-  while (!ccs.available())
-    ;
+  while (!ccs.available());
 
   Serial.begin(9600);
   mySerial.begin(9600);
@@ -139,23 +139,26 @@ void readPMData()
   Blynk.virtualWrite(V1, pm1);
   Blynk.virtualWrite(V2, pm2_5);
   Blynk.virtualWrite(V3, pm10);
-  Blynk.virtualWrite(V4, ccs.geteCO2());
+  
 
   delay(1000);
 }
 
-void loop()
-{
-  Blynk.run();
-  readPMData();
+// Function to Read and Send eCO2 and TVOC Data to Serial Monitor
+void readeCO2(){
+ 
+
   if (ccs.available())
   {
     if (!ccs.readData())
     {
+      // Read eCO2 and TVOC
+      eCO2 = ccs.geteCO2();
+      TVOC = ccs.getTVOC();  
       Serial.print("eCO2: ");
-      Serial.print(ccs.geteCO2());
+      Serial.print(eCO2);
       Serial.print(" ppm, TVOC: ");
-      Serial.print(ccs.getTVOC());
+      Serial.print(TVOC);
       Serial.println(" ppb");
     }
     else
@@ -164,4 +167,15 @@ void loop()
     }
   }
   delay(1000);
+
+
+  // Send to Blynk Dashboard (Assign Virtual Pins)
+  Blynk.virtualWrite(V4, eCO2);
+}
+
+void loop()
+{
+  Blynk.run();
+  readPMData();
+  readeCO2();
 }
