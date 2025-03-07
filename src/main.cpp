@@ -55,45 +55,8 @@ void checkingi2c()
   Serial.println(" device(s).");
 }
 
-
-void setup()
-{
-  pinMode(RelayPin, OUTPUT);
-
-  Wire.begin();
-  if (!ccs.begin())
-  {
-    Serial.println("Failed to start sensor! Please check your wiring.");
-    while (1);
-  }
-  // Wait for the sensor to be ready
-  while (!ccs.available());
-
-  Serial.begin(9600);
-  mySerial.begin(9600);
-
-  // connect WiFi
-  WiFi.begin(ssid, password);
-
-  Serial.print("Connecting to WiFi...");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(1000);
-    Serial.print(".");
-  }
-
-  Serial.println("\nConnected!");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-
-  // Connect to Blynk
-  Blynk.begin("ov9pT-x8NgNHIvmLpBkkP4qh0kUNCjEN", "Ohm", "123456789");
-
-  checkingi2c();
-}
-
 // Function to Read and Send PM Data to Blynk
-void readPMData()
+void ReadAndChangePMData()
 {
   int index = 0;
   char value;
@@ -131,6 +94,8 @@ void readPMData()
     index++;
   }
 
+
+
   // Clear Serial Buffer
   while (mySerial.available())
     mySerial.read();
@@ -142,14 +107,13 @@ void readPMData()
   Blynk.virtualWrite(V1, pm1);
   Blynk.virtualWrite(V2, pm2_5);
   Blynk.virtualWrite(V3, pm10);
-  
 
   delay(1000);
 }
 
 // Function to Read and Send eCO2 and TVOC Data to Serial Monitor
-void readeCO2(){
- 
+void readeCO2()
+{
 
   if (ccs.available())
   {
@@ -157,7 +121,7 @@ void readeCO2(){
     {
       // Read eCO2 and TVOC
       eCO2 = ccs.geteCO2();
-      TVOC = ccs.getTVOC();  
+      TVOC = ccs.getTVOC();
       Serial.print("eCO2: ");
       Serial.print(eCO2);
       Serial.print(" ppm, TVOC: ");
@@ -171,31 +135,65 @@ void readeCO2(){
   }
   delay(1000);
 
-
   // Send to Blynk Dashboard (Assign Virtual Pins)
   Blynk.virtualWrite(V4, eCO2);
 }
 
 // Function to Alert When High CO2 Detected
-void AlertWhenHighCO2(){
+void AlertWhenHighCO2()
+{
   eCO2 = ccs.geteCO2();
 
-  if(eCO2 > 1000){
+  if (eCO2 > 1000)
+  {
     digitalWrite(RelayPin, HIGH);
     delay(1000);
     digitalWrite(RelayPin, LOW);
   }
 }
 
-void loop(){
+void setup()
+{
+  pinMode(RelayPin, OUTPUT);
+
+  Wire.begin();
+  if (!ccs.begin())
+  {
+    Serial.println("Failed to start sensor! Please check your wiring.");
+    while (1)
+      ;
+  }
+  // Wait for the sensor to be ready
+  while (!ccs.available())
+    ;
+
+  Serial.begin(9600);
+  mySerial.begin(9600);
+
+  // connect WiFi
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting to WiFi...");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(1000);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConnected!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // Connect to Blynk
+  Blynk.begin("ov9pT-x8NgNHIvmLpBkkP4qh0kUNCjEN", "Ohm", "123456789");
+
+  checkingi2c();
+}
+
+void loop()
+{
   Blynk.run();
-  readPMData();
+  ReadAndChangePMData();
   readeCO2();
   // AlertWhenHighCO2();
-
-  digitalWrite(RelayPin, HIGH);
-  delay(1000);
-  digitalWrite(RelayPin, LOW);
-  delay(1000);
-
 }
