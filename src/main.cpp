@@ -1,8 +1,7 @@
 #define BLYNK_TEMPLATE_ID "TMPL6CJvPqOYw"
 #define BLYNK_TEMPLATE_NAME "Air Filtering"
 #define BLYNK_AUTH_TOKEN "ov9pT-x8NgNHIvmLpBkkP4qh0kUNCjEN"
-#define LED 27
-
+#define RelayPin 27
 
 #include <WiFi.h>
 #include <BlynkSimpleEsp32.h>
@@ -59,7 +58,7 @@ void checkingi2c()
 
 void setup()
 {
-  pinMode(LED, OUTPUT);
+  pinMode(RelayPin, OUTPUT);
 
   Wire.begin();
   if (!ccs.begin())
@@ -182,9 +181,9 @@ void AlertWhenHighCO2(){
   eCO2 = ccs.geteCO2();
 
   if(eCO2 > 1000){
-    digitalWrite(LED, HIGH);
+    digitalWrite(RelayPin, HIGH);
     delay(1000);
-    digitalWrite(LED, LOW);
+    digitalWrite(RelayPin, LOW);
   }
 }
 
@@ -192,5 +191,11 @@ void loop(){
   Blynk.run();
   readPMData();
   readeCO2();
-  AlertWhenHighCO2();
+  // AlertWhenHighCO2();
+
+  digitalWrite(RelayPin, HIGH);
+  delay(1000);
+  digitalWrite(RelayPin, LOW);
+  delay(1000);
+
 }
