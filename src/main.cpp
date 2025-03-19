@@ -11,7 +11,7 @@
 #include <Adafruit_CCS811.h>
 
 Adafruit_CCS811 ccs;
-SoftwareSerial mySerial(32, 33); // RX, TX
+SoftwareSerial mySerial(33, 32); // RX, TX
 int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
@@ -143,13 +143,10 @@ void readeCO2()
 void AlertWhenHighCO2()
 {
   eCO2 = ccs.geteCO2();
-
-  if (eCO2 > 1000)
-  {
     digitalWrite(RelayPin, HIGH);
-    delay(1000);
+    delay(10000);
     digitalWrite(RelayPin, LOW);
-  }
+    delay(1000);
 }
 
 void setup()
@@ -195,5 +192,5 @@ void loop()
   Blynk.run();
   ReadAndChangePMData();
   readeCO2();
-  // AlertWhenHighCO2();
+  AlertWhenHighCO2(); 
 }
