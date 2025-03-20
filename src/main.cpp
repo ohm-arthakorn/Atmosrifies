@@ -53,6 +53,7 @@ void checkingi2c()
   Serial.print("Found ");
   Serial.print(count, DEC);
   Serial.println(" device(s).");
+ 
 }
 
 // Function to Read and Send PM Data to Blynk
@@ -139,14 +140,19 @@ void readeCO2()
   Blynk.virtualWrite(V4, eCO2);
 }
 
-// Function to Alert When High CO2 Detected
-void AlertWhenHighCO2()
-{
+void ReleaseFog(){
   eCO2 = ccs.geteCO2();
+
+
+
+  // Release Fog when CO2 is more than 2000 ppm
+  if(eCO2 > 2000){
     digitalWrite(RelayPin, HIGH);
-    delay(10000);
+  }
+  // When CO2 is less than 2000 ppm
+  else{ 
     digitalWrite(RelayPin, LOW);
-    delay(1000);
+  }
 }
 
 void setup()
@@ -164,7 +170,7 @@ void setup()
   while (!ccs.available())
     ;
 
-  Serial.begin(9600);
+  Serial.begin(115200);
   mySerial.begin(9600);
 
   // connect WiFi
@@ -192,5 +198,5 @@ void loop()
   Blynk.run();
   ReadAndChangePMData();
   readeCO2();
-  AlertWhenHighCO2(); 
+  ReleaseFog();
 }
