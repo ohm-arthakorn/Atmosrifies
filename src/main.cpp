@@ -1,16 +1,11 @@
-#define BLYNK_TEMPLATE_ID "TMPL6CJvPqOYw"
-#define BLYNK_TEMPLATE_NAME "Air Filtering"
-#define BLYNK_AUTH_TOKEN "ov9pT-x8NgNHIvmLpBkkP4qh0kUNCjEN"
 #define RelayPin 27
 
+
 #include <WiFi.h>
-#include <BlynkSimpleEsp32.h>
 #include <SoftwareSerial.h>
 #include "Adafruit_SPIDevice.h"
 #include <Wire.h>
-#include <Adafruit_CCS811.h>
 
-Adafruit_CCS811 ccs;
 SoftwareSerial mySerial(33, 32); // RX, TX
 int pm1 = 0;
 int pm2_5 = 0;
@@ -30,7 +25,6 @@ void checkingi2c()
   }
 
   Serial.println();
-  Serial.println("www.9arduino.com ...");
   Serial.println("I2C scanner. Scanning ...");
   byte count = 0;
 
@@ -95,8 +89,6 @@ void ReadAndChangePMData()
     index++;
   }
 
-
-
   // Clear Serial Buffer
   while (mySerial.available())
     mySerial.read();
@@ -104,71 +96,22 @@ void ReadAndChangePMData()
   // Print Values
   Serial.printf("{ \"pm1\": %d ug/m3, \"pm2_5\": %d ug/m3, \"pm10\": %d ug/m3 }\n", pm1, pm2_5, pm10);
 
-  // Send to Blynk Dashboard (Assign Virtual Pins)
-  Blynk.virtualWrite(V1, pm1);
-  Blynk.virtualWrite(V2, pm2_5);
-  Blynk.virtualWrite(V3, pm10);
 
   delay(1000);
-}
-
-// Function to Read and Send eCO2 and TVOC Data to Serial Monitor
-void readeCO2()
-{
-
-  if (ccs.available())
-  {
-    if (!ccs.readData())
-    {
-      // Read eCO2 and TVOC
-      eCO2 = ccs.geteCO2();
-      TVOC = ccs.getTVOC();
-      Serial.print("eCO2: ");
-      Serial.print(eCO2);
-      Serial.print(" ppm, TVOC: ");
-      Serial.print(TVOC);
-      Serial.println(" ppb");
-    }
-    else
-    {
-      Serial.println("Error reading sensor data");
-    }
+  
+  if(pm2_5 > 50){
+    digitalWrite(RelayPin, 1);
   }
-  delay(1000);
-
-  // Send to Blynk Dashboard (Assign Virtual Pins)
-  Blynk.virtualWrite(V4, eCO2);
-}
-
-void ReleaseFog(){
-  eCO2 = ccs.geteCO2();
-
-
-
-  // Release Fog when CO2 is more than 2000 ppm
-  if(eCO2 > 2000){
-    digitalWrite(RelayPin, HIGH);
-  }
-  // When CO2 is less than 2000 ppm
-  else{ 
-    digitalWrite(RelayPin, LOW);
+  else{
+    digitalWrite(RelayPin, 0);
   }
 }
 
 void setup()
 {
   pinMode(RelayPin, OUTPUT);
-
+  digitalWrite(RelayPin, HIGH); // make sure Relay started with closed state ! 
   Wire.begin();
-  if (!ccs.begin())
-  {
-    Serial.println("Failed to start sensor! Please check your wiring.");
-    while (1)
-      ;
-  }
-  // Wait for the sensor to be ready
-  while (!ccs.available())
-    ;
 
   Serial.begin(115200);
   mySerial.begin(9600);
@@ -188,15 +131,11 @@ void setup()
   Serial.println(WiFi.localIP());
 
   // Connect to Blynk
-  Blynk.begin("ov9pT-x8NgNHIvmLpBkkP4qh0kUNCjEN", "Ohm", "123456789");
-
   checkingi2c();
 }
 
+// function that can control a foggy from blynk app
 void loop()
 {
-  Blynk.run();
   ReadAndChangePMData();
-  readeCO2();
-  ReleaseFog();
 }
