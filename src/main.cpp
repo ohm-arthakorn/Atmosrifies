@@ -1,6 +1,5 @@
 #define RelayPin 27
 
-
 #include <WiFi.h>
 #include <SoftwareSerial.h>
 #include "Adafruit_SPIDevice.h"
@@ -10,8 +9,6 @@ SoftwareSerial mySerial(33, 32); // RX, TX
 int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
-int eCO2;
-int TVOC;
 
 // WiFi Credentials
 const char *ssid = "Ohm";
@@ -99,7 +96,8 @@ void ReadAndChangePMData()
 
   delay(1000);
   
-  if(pm2_5 > 50){
+  // if pm2.5 is greater than 38, turn on the relay 
+  if(pm2_5 > 38){
     digitalWrite(RelayPin, 1);
   }
   else{
