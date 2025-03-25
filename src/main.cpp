@@ -1,7 +1,7 @@
 #define RelayPin 27
 // ประกาศ Subscribe และ Publish ที่จะใช้ในการส่งข้อมูลเข้า Node Red
-#define Subscribe "data/sub"
-#define Publish "data/pub"
+#define Subscribe "sub"
+#define Publish "pub"
 
 #include <WiFi.h>
 #include <SoftwareSerial.h>
@@ -26,7 +26,7 @@ PubSubClient client(espClient);
 
 const int mqttPort = 1883;
 const char *mqttServer = "broker.mqtt.cool";
-const char *mqttClient = "Arthakorn";
+const char *mqttClient = "test_1";
 const char *mqttUsername = "";
 const char *mqttPassword = "";
 
@@ -42,7 +42,7 @@ void reconnect(){
     Serial.print("Attempting MQTT connection...");
     if(client.connect(mqttClient, mqttUsername, mqttPassword)){
       Serial.println("Connected !");
-      client.subscribe("sub");
+      client.subscribe(Subscribe);
     }
     else{
       Serial.print("Failed, rc=");
@@ -167,9 +167,8 @@ void ReadandSendPM()
     DataString.toCharArray(msg, 100);
     Serial.print("Publish message: ");
     Serial.println(msg);
-    client.publish("sub",msg);
+    client.publish(Subscribe,msg);
   }
-
   delay(1);
   client.loop();
 }
@@ -178,7 +177,6 @@ void ReadandSendPM()
 // * ฟังก์ชันสำหรับการเชื่อมต่อ WiFi
 void connectedWiFi(){
   WiFi.begin(ssid, password);
-
   Serial.print("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -213,5 +211,8 @@ void setup()
 // function that can control a foggy from blynk app
 void loop()
 {
+  if (!client.connected()) {
+    reconnect();
+  }
   ReadandSendPM();
 }
