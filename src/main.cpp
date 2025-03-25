@@ -11,8 +11,13 @@ int pm2_5 = 0;
 int pm10 = 0;
 
 // WiFi Credentials
-const char *ssid = "Ohm";
-const char *password = "123456789";
+const char *ssid = "dawdarari";
+const char *password = "201048840102";
+const char *mosquitto_server = 1883;
+const int mosquitto_port = 1883;
+const char *mosquitto_Client = "Apitsara";
+const char *mosquitto_username = "";
+const char *mosquitto_password = "";
 
 // I2C Scanner
 void checkingi2c()
@@ -127,7 +132,8 @@ void setup()
   Serial.println("\nConnected!");
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
-
+  Client.publish("Apitsara",msg);
+  
   // Connect to Blynk
   checkingi2c();
 }
