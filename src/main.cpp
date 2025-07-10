@@ -36,8 +36,7 @@ long lastMsg = 0;
 int value = 0;
 char msg[100];
 
-
-// * ส่วนสำหรับการสร้างตัวแปรที่เก็บค่าฝุ่นต่าง ๆ 
+// * ส่วนสำหรับการสร้างตัวแปรที่เก็บค่าฝุ่นต่าง ๆ
 int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
@@ -162,16 +161,13 @@ void ReadPM()
 // * ฟังก์ชันสำหรับการอ่านค่า PM และส่งค่าขึ้น Node-Red
 void SendPM()
 {
-  if (initialMillis - lastMsg > 1000)
-  {
-    lastMsg = initialMillis;
-    ++value;
-    DataString = "{ \"pm1\": " + String(pm1) + ", \"pm2_5\": " + String(pm2_5) + ", \"pm10\": " + String(pm10) + " }";
-    DataString.toCharArray(msg, 100);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish(Subscribe, msg);
-  }
+  lastMsg = initialMillis;
+  ++value;
+  DataString = "{ \"pm1\": " + String(pm1) + ", \"pm2_5\": " + String(pm2_5) + ", \"pm10\": " + String(pm10) + " }";
+  DataString.toCharArray(msg, 100);
+  Serial.print("Publish message: ");
+  Serial.println(msg);
+  client.publish(Subscribe, msg);
   delay(1);
   client.loop();
 }
@@ -201,24 +197,21 @@ void setup()
   Serial.begin(115200);
   mySerial.begin(9600);
 
+  // * ประกาศเรียกใช้ฟังก์ชันสำหรับการเชื่อมต่อ WiFi
+  connectedWiFi();
+  checkingi2c();
+
   // * ส่วนที่เกี่ยวกับการเชื่อมต่อ MQTT
   client.setServer(mqttServer, mqttPort);
   client.setCallback(callback);
   client.subscribe(Subscribe);
-
-  // * ประกาศเรียกใช้ฟังก์ชันสำหรับการเชื่อมต่อ WiFi
-  connectedWiFi();
-  checkingi2c();
 }
 
 // function that can control a foggy from blynk app
 void loop()
 {
-  if (!client.connected())
-  {
-    reconnect();
-  }
 
+  reconnect();
   ReadPM();
   SendPM();
 }
