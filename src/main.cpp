@@ -1,7 +1,7 @@
 // ประกาศ Subscribe และ Publish ที่จะใช้ในการส่งข้อมูลเข้า Node Red
 #define RelayPin 21
 #define LED_Red 26
-#define LED_Green 25
+#define LED_Blue 25
 #define Subscribe "atmos/receive"
 #define Publish "atmos/send"
 
@@ -12,8 +12,6 @@
 #include <PubSubClient.h>
 
 SoftwareSerial mySerial(33, 32); // RX, TX
-
-// * ส่วนจัดการกับการเชื่อมต่อต่าง ๆ ไม่ว่าจะเป็น WiFi หรือ MQTT
 
 // * ส่วนของการจัดการเรื่องของการเชื่อมต่อ WiFi
 const char *ssid = "Ohm";
@@ -40,8 +38,90 @@ char msg[100];
 int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
+int AQI;
+// diff AQI2.5
+int X1 = -25;
+int X2 = 24;
+int X3 = 49;
+int X4 = 99;
+// diff MIN MAX pm 2.5
+int I1 = -25;
+int I2 = 11;
+int I3 = 12;
+int I4 = 39;
+// diff MIN MAX pm 10
+int Y1 = -50;
+int Y2 = 29;
+int Y3 = 39;
+int Y4 = 59;
 
-// ฟังก์ชันสำหรับการเชื่อมต่อ MQTT เข้ากับ Node Red
+int AQI2_5(int pm2_5)
+{
+  int _AQI_2_5;
+  if (pm2_5 > 0 && pm2_5 < 26)
+  {
+    _AQI_2_5 = ((X1 / I1) * (pm2_5 - 0)) + 0;
+  }
+  else if (pm2_5 >= 26 && pm2_5 < 38)
+  {
+    _AQI_2_5 = ((X2 / I2) * (pm2_5 - 26)) + 26;
+  }
+  else if (pm2_5 >= 38 && pm2_5 < 51)
+  {
+    _AQI_2_5 = ((X3 / I3) * (pm2_5 - 38)) + 51;
+  }
+  else if (pm2_5 >= 51 && pm2_5 < 91)
+  {
+    _AQI_2_5 = ((X4 / I4) * (pm2_5 - 51)) + 101;
+  }
+  else if (pm2_5 >= 92)
+  {
+    Serial.print("danger AQI > 200");
+  }
+  return _AQI_2_5;
+}
+int AQI10_0(int pm10_0)
+{
+  int _AQI_10_0;
+  if (pm10_0 > 0 && pm10_0 < 51)
+  {
+    _AQI_10_0 = ((X1 / Y1) * (pm10_0 - 0)) + 0;
+  }
+  else if (pm10_0 >= 51 && pm10_0 < 81)
+  {
+    _AQI_10_0 = ((X2 / Y2) * (pm10_0 - 26)) + 26;
+  }
+  else if (pm10_0 >= 81 && pm10_0 < 121)
+  {
+    _AQI_10_0 = ((X3 / Y3) * (pm10_0 - 38)) + 51;
+  }
+  else if (pm10_0 >= 121 && pm10_0 < 181)
+  {
+    _AQI_10_0 = ((X4 / Y4) * (pm10_0 - 51)) + 101;
+  }
+  else if (pm10_0 >= 181)
+  {
+    Serial.print("danger AQI > 200");
+  }
+  return _AQI_10_0;
+}
+int Thai_AQI(int PM2_5, int PM10)
+{
+  int final_AQI;
+  int AQI_10_val = AQI10_0(PM10);
+  int AQI_2_5_val = AQI2_5(PM2_5);
+  if (AQI_10_val >= AQI_2_5_val)
+  {
+    final_AQI = AQI_10_val;
+  }
+  else
+  {
+    final_AQI = AQI_2_5_val;
+  }
+  return final_AQI;
+}
+
+// * ฟังก์ชันสำหรับการเชื่อมต่อ MQTT เข้ากับ Node Red
 void reconnect()
 {
   while (!client.connected())
@@ -62,7 +142,7 @@ void reconnect()
   }
 }
 
-// ฟังก์ชัน Callback สำหรับการรับข้อมูลจาก Node Red
+// * ฟังก์ชัน Callback สำหรับการรับข้อมูลจาก Node Red
 void callback(char *topic, byte *payload, unsigned int length)
 {
   Serial.print("Message arrived [");
@@ -113,7 +193,6 @@ void checkingi2c()
 // * ฟังก์ชันสำหรับการอ่านค่า PM และแสดงผลผ่าน Serial Monitor
 void ReadPM()
 {
-
   int index = 0;
   char value;
   char previousValue;
@@ -161,9 +240,10 @@ void ReadPM()
 // * ฟังก์ชันสำหรับการอ่านค่า PM และส่งค่าขึ้น Node-Red
 void SendPM()
 {
+  AQI = Thai_AQI(pm2_5,pm10);
   lastMsg = initialMillis;
   ++value;
-  DataString = "{ \"pm1\": " + String(pm1) + ", \"pm2_5\": " + String(pm2_5) + ", \"pm10\": " + String(pm10) + " }";
+  DataString = "{ \"pm1\": " + String(pm1) + ", \"pm2_5\": " + String(pm2_5) + ", \"pm10\": " + String(pm10) + ", \"AQI\": " + String(AQI) +"}";
   DataString.toCharArray(msg, 100);
   Serial.print("Publish message: ");
   Serial.println(msg);
@@ -171,6 +251,17 @@ void SendPM()
   delay(1);
   client.loop();
 }
+
+void CheckingAQI(){
+  AQI = Thai_AQI(pm2_5,pm10);
+  if(AQI>50){
+    digitalWrite(LED_Red,1);
+  }
+  else{
+    digitalWrite(LED_Blue,1);
+  }
+}
+
 
 // * ฟังก์ชันสำหรับการเชื่อมต่อ WiFi
 void connectedWiFi()
@@ -188,9 +279,14 @@ void connectedWiFi()
   Serial.println(WiFi.localIP());
 }
 
+
+
+// * SETUP Function
 void setup()
 {
   pinMode(RelayPin, OUTPUT);
+  pinMode(LED_Blue, OUTPUT);
+  pinMode(LED_Red, OUTPUT);
   digitalWrite(RelayPin, HIGH); // make sure Relay started with closed state !
   Wire.begin();
 
@@ -207,11 +303,11 @@ void setup()
   client.subscribe(Subscribe);
 }
 
-// function that can control a foggy from blynk app
+// * LOOP function
 void loop()
 {
-
   reconnect();
   ReadPM();
   SendPM();
+  CheckingAQI();
 }
