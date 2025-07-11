@@ -238,8 +238,7 @@ void setup()
 {
   pinMode(RelayPin, OUTPUT);
   pinMode(LED_Blue, OUTPUT);
-  pinMode(LED_Red, OUTPUT); 
-  pinMode(RelayPin, 0);
+  pinMode(LED_Red, OUTPUT);
   Wire.begin();
 
   Serial.begin(115200);
