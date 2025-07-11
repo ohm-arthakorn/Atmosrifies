@@ -1,5 +1,5 @@
 // ประกาศ Subscribe และ Publish ที่จะใช้ในการส่งข้อมูลเข้า Node Red
-#define RelayPin 21
+#define RelayPin 27
 #define LED_Red 26
 #define LED_Blue 25
 #define Subscribe "atmos/receive"
@@ -10,6 +10,7 @@
 #include "Adafruit_SPIDevice.h"
 #include <Wire.h>
 #include <PubSubClient.h>
+#include <AQI.h>
 
 SoftwareSerial mySerial(33, 32); // RX, TX
 
@@ -23,7 +24,7 @@ PubSubClient client(espClient);
 
 const int mqttPort = 1883;
 const char *mqttServer = "test.mosquitto.org";
-const char *mqttClient = "";
+const char *mqttClient = "ohm_arthakorn";
 const char *mqttUsername = "";
 const char *mqttPassword = "";
 unsigned long initialMillis = millis();
@@ -39,87 +40,6 @@ int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
 int AQI;
-// diff AQI2.5
-int X1 = -25;
-int X2 = 24;
-int X3 = 49;
-int X4 = 99;
-// diff MIN MAX pm 2.5
-int I1 = -25;
-int I2 = 11;
-int I3 = 12;
-int I4 = 39;
-// diff MIN MAX pm 10
-int Y1 = -50;
-int Y2 = 29;
-int Y3 = 39;
-int Y4 = 59;
-
-int AQI2_5(int pm2_5)
-{
-  int _AQI_2_5;
-  if (pm2_5 > 0 && pm2_5 < 26)
-  {
-    _AQI_2_5 = ((X1 / I1) * (pm2_5 - 0)) + 0;
-  }
-  else if (pm2_5 >= 26 && pm2_5 < 38)
-  {
-    _AQI_2_5 = ((X2 / I2) * (pm2_5 - 26)) + 26;
-  }
-  else if (pm2_5 >= 38 && pm2_5 < 51)
-  {
-    _AQI_2_5 = ((X3 / I3) * (pm2_5 - 38)) + 51;
-  }
-  else if (pm2_5 >= 51 && pm2_5 < 91)
-  {
-    _AQI_2_5 = ((X4 / I4) * (pm2_5 - 51)) + 101;
-  }
-  else if (pm2_5 >= 92)
-  {
-    Serial.print("danger AQI > 200");
-  }
-  return _AQI_2_5;
-}
-int AQI10_0(int pm10_0)
-{
-  int _AQI_10_0;
-  if (pm10_0 > 0 && pm10_0 < 51)
-  {
-    _AQI_10_0 = ((X1 / Y1) * (pm10_0 - 0)) + 0;
-  }
-  else if (pm10_0 >= 51 && pm10_0 < 81)
-  {
-    _AQI_10_0 = ((X2 / Y2) * (pm10_0 - 26)) + 26;
-  }
-  else if (pm10_0 >= 81 && pm10_0 < 121)
-  {
-    _AQI_10_0 = ((X3 / Y3) * (pm10_0 - 38)) + 51;
-  }
-  else if (pm10_0 >= 121 && pm10_0 < 181)
-  {
-    _AQI_10_0 = ((X4 / Y4) * (pm10_0 - 51)) + 101;
-  }
-  else if (pm10_0 >= 181)
-  {
-    Serial.print("danger AQI > 200");
-  }
-  return _AQI_10_0;
-}
-int Thai_AQI(int PM2_5, int PM10)
-{
-  int final_AQI;
-  int AQI_10_val = AQI10_0(PM10);
-  int AQI_2_5_val = AQI2_5(PM2_5);
-  if (AQI_10_val >= AQI_2_5_val)
-  {
-    final_AQI = AQI_10_val;
-  }
-  else
-  {
-    final_AQI = AQI_2_5_val;
-  }
-  return final_AQI;
-}
 
 // * ฟังก์ชันสำหรับการเชื่อมต่อ MQTT เข้ากับ Node Red
 void reconnect()
@@ -136,8 +56,8 @@ void reconnect()
     {
       Serial.print("Failed, rc=");
       Serial.print(client.state());
-      Serial.println("Try again in 5 seconds !");
-      delay(5000);
+      Serial.println(" Try again in 1 seconds !");
+      delay(1000);
     }
   }
 }
@@ -232,18 +152,18 @@ void ReadPM()
   while (mySerial.available())
     mySerial.read();
 
-  // Print Values
-  Serial.printf("{ \"pm1\": %d ug/m3, \"pm2_5\": %d ug/m3, \"pm10\": %d ug/m3 }\n", pm1, pm2_5, pm10);
+  // แสดงผลของค่าใน Serial Monitor
+  Serial.printf("{ \"pm1\": %d ug/m3, \"pm2_5\": %d ug/m3, \"pm10\": %d ug/m3 }, \"AQI\": %d\n", pm1, pm2_5, pm10, AQI);
   delay(1000);
 }
 
 // * ฟังก์ชันสำหรับการอ่านค่า PM และส่งค่าขึ้น Node-Red
 void SendPM()
 {
-  AQI = Thai_AQI(pm2_5,pm10);
+  AQI = Thai_AQI(pm2_5, pm10);
   lastMsg = initialMillis;
   ++value;
-  DataString = "{ \"pm1\": " + String(pm1) + ", \"pm2_5\": " + String(pm2_5) + ", \"pm10\": " + String(pm10) + ", \"AQI\": " + String(AQI) +"}";
+  DataString = "{ \"pm1\": " + String(pm1) + ", \"pm2_5\": " + String(pm2_5) + ", \"pm10\": " + String(pm10) + ", \"AQI\": " + String(AQI) + "}";
   DataString.toCharArray(msg, 100);
   Serial.print("Publish message: ");
   Serial.println(msg);
@@ -252,16 +172,50 @@ void SendPM()
   client.loop();
 }
 
-void CheckingAQI(){
-  AQI = Thai_AQI(pm2_5,pm10);
-  if(AQI>50){
-    digitalWrite(LED_Red,1);
-  }
-  else{
-    digitalWrite(LED_Blue,1);
-  }
+void OpenPurify()
+{
+  digitalWrite(RelayPin, 0);
+  digitalWrite(LED_Red, 1);
+  digitalWrite(LED_Blue, 0);
 }
 
+void ClosePurify()
+{
+  digitalWrite(RelayPin, 1);
+  digitalWrite(LED_Red, 0);
+  digitalWrite(LED_Blue, 1);
+}
+
+void CheckingAQI()
+{
+  // เก็บค่าฝุ่น pm2.5 และ pm10 เป็นค่าปริมาณคุณภาพอากาศ
+  AQI = Thai_AQI(pm2_5, pm10);
+  if (AQI > 0 && AQI < 26)
+  { // เงื่อนไขอากาศดีมาก
+    Serial.println("Air Quality is excellent !");
+    ClosePurify();
+  }
+  else if (AQI >= 26 && AQI < 51)
+  { // เงื่อนไขอากาศดี
+    Serial.println("Air Quality is good");
+    ClosePurify();
+  }
+  else if (AQI >= 51 && AQI < 101)
+  { // เงื่อนไขอากาศปานกลาง
+    Serial.println("Air Quality is intermediate");
+    ClosePurify();
+  }
+  else if (AQI >= 101 && AQI < 200)
+  { // เงื่อนไขอากาศแย่
+    Serial.println("Air Quality is bad");
+    OpenPurify();
+  }
+  else
+  { // เงื่อนไขอากาศแย่มาก
+    Serial.println("Air Quality is terrify !");
+    OpenPurify();
+  }
+}
 
 // * ฟังก์ชันสำหรับการเชื่อมต่อ WiFi
 void connectedWiFi()
@@ -279,15 +233,13 @@ void connectedWiFi()
   Serial.println(WiFi.localIP());
 }
 
-
-
 // * SETUP Function
 void setup()
 {
   pinMode(RelayPin, OUTPUT);
   pinMode(LED_Blue, OUTPUT);
-  pinMode(LED_Red, OUTPUT);
-  digitalWrite(RelayPin, HIGH); // make sure Relay started with closed state !
+  pinMode(LED_Red, OUTPUT); 
+  pinMode(RelayPin, 0);
   Wire.begin();
 
   Serial.begin(115200);
